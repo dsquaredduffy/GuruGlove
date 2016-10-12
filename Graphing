@@ -1,0 +1,18 @@
+void PrintMovAvgFiltAcc(sensors_event_t event)
+{
+  float *movavg = DetermineAccPitchRoll(event);
+  int pitch = median_filter(movavg[0]);
+  int roll = median_filter(movavg[1]);
+
+  //See Regular Data
+  /*Serial.print("Pitch:: "); Serial.print(movavg[0],2); Serial.print("  ");
+  Serial.print("Roll: "); Serial.print(movavg[1],2); Serial.println("  ");*/
+
+  //See Data Versus Filtered Data
+  /*Serial.print("Pitch:: "); Serial.print(movavg[0],2); Serial.print("  "); Serial.print("F_Pitch:: "); Serial.print(pitch); Serial.print("      ");
+  Serial.print("Roll: "); Serial.print(movavg[1],2); Serial.print("  "); Serial.print("F_Roll:: "); Serial.println(roll);*/
+
+  //Used for graphing
+  /*Serial.print((int)movavg[0]); Serial.print(","); Serial.print((int)movavg[1]); Serial.print(",");
+  Serial.print(pitch);Serial.print(","); Serial.println(roll);*/
+}
