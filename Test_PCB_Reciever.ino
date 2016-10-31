@@ -1,6 +1,12 @@
 const char startOfNumberDelimiter = '<';
 const char endOfNumberDelimiter   = '>';
 
+enum { FlexDegree, AccPitch, AccRoll };
+
+int whichNumber = flex_deg;
+
+float flex_deg, acc_pitch, acc_roll;
+
 void setup ()
  { 
  Serial.begin (115200);
@@ -9,7 +15,28 @@ void setup ()
  
 void processNumber (const long n)
  {
- Serial.println (n);
+  switch (whichNumber)
+    {
+    case FlexDegree: 
+      flex_deg = x;
+      whichNumber = AccPitch;
+      Serial.print ("Flex Degree = ");
+      break;
+      
+    case AccPitch: 
+      acc_pitch = x;
+      whichNumber = AccRoll;
+      Serial.print ("Accelerometer Pitch = ");
+      break;
+
+    case AccRoll: 
+      acc_roll = x;
+      whichNumber = FlexDegree;
+      Serial.print ("Accelerometer Roll = ");
+      break;
+    }
+    
+  Serial.println (n);
  }
  
 void processInput ()
@@ -50,6 +77,5 @@ void loop ()
  
  if (Serial.available ())
    processInput ();
-   
- // do other stuff here
+      
  } 
