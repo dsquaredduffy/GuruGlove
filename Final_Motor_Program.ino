@@ -11,16 +11,17 @@ const char endOfNumberDelimiter   = '>';
 enum { Shoulder_Pitch, Shoulder_Yaw, Elbow_Flexion, Wrist_Roll, Wrist_Flexion, Finger_Flexion };
 int whichNumber = Shoulder_Pitch;
 int shoulder_pitch, shoulder_yaw,elbow_flexion,wrist_roll,wrist_flexion,finger_flexion;
+int deg_number;
 
 void setup() {
   Serial.begin(115200);
   Serial.println ("Starting ...");
-  shoulder_lift_servo.attach(3);    
-  shoulder_rotate_servo.attach(5);   
-  elbow_servo.attach(6);  
-  wrist_rotation_servo.attach(9); 
-  wrist_flexion_servo.attach(10); 
-  finger_servo.attach(11);
+  shoulder_lift_servo.attach(8);    
+  shoulder_rotate_servo.attach(9);   
+  elbow_servo.attach(10);  
+  wrist_rotation_servo.attach(11); 
+  wrist_flexion_servo.attach(12); 
+  finger_servo.attach(13);
 }
 
 void processNumber (const long degree)
@@ -32,6 +33,7 @@ void processNumber (const long degree)
       whichNumber = Shoulder_Yaw;
       shoulder_lift_servo.write(shoulder_pitch);
       Serial.print ("Shoulder Pitch = ");
+      deg_number = 1;
       break;
       
     case Shoulder_Yaw: 
@@ -39,6 +41,7 @@ void processNumber (const long degree)
       whichNumber = Elbow_Flexion;
       shoulder_rotate_servo.write(shoulder_yaw);
       Serial.print ("Shoulder Yaw = ");
+      deg_number = 2;
       break;
 
     case Elbow_Flexion: 
@@ -46,6 +49,7 @@ void processNumber (const long degree)
       whichNumber = Wrist_Roll;
       elbow_servo.write(elbow_flexion);
       Serial.print ("Elbow Flexion Angle = ");
+      deg_number = 3;
       break;
 
      case Wrist_Roll: 
@@ -53,6 +57,7 @@ void processNumber (const long degree)
       whichNumber = Wrist_Flexion;
       wrist_rotation_servo.write(wrist_roll);
       Serial.print ("Wrist Roll = ");
+      deg_number = 4;
       break;
       
     case Wrist_Flexion: 
@@ -60,6 +65,7 @@ void processNumber (const long degree)
       whichNumber = Finger_Flexion;
       wrist_flexion_servo.write(wrist_flexion);
       Serial.print ("Wrist Flexion Angle = ");
+      deg_number = 5;
       break;
 
     case Finger_Flexion: 
@@ -67,6 +73,7 @@ void processNumber (const long degree)
       whichNumber = Shoulder_Pitch;
       finger_servo.write(finger_flexion);
       Serial.print ("Finger Flexion Angle = ");
+      deg_number = 6;
       break;     
     }
     
@@ -108,7 +115,8 @@ void processInput ()
 void loop ()
  {
    if (Serial.available ())
-     processInput ();
-     
-   delay(1);
+      processInput ();
+      
+   if(deg_number == 6)
+      delay(15);
  }
