@@ -1,34 +1,46 @@
 #include <Wire.h>
-#include <L3G.h>
 #include <ADXL345.h>
 #include <HMC5883L.h>
 #define  STOPPER 0              /* Smaller than any datum */
 #define  MEDIAN_FILTER_SIZE (17)
 
-//L3G s_gyro, w_gyro;
 HMC5883L compass;
 ADXL345 wrist_acc, shoulder_acc;
 
-const char startOfNumberDelimiter = '<';
-const char endOfNumberDelimiter   = '>';
+const char startOfDegreeDelimiter    = '<';
+const char endOfDegreeDelimiter      = '>';
+
+const char startOfNumberDelimiter    = '{';
+const char endOfNumberDelimiter      = '}';
+
+const char startOfCharacterDelimiter = '[';
+const char endOfCharacterDelimiter   = ']';
 
 // Pin values for flex sensor inputs
-const int finger_pin = 40; 
-const int elbow_pin = 39; 
-const int fwrist_pin = 38; 
-const int bwrist_pin = 37; 
+const int finger_pin = 0; //PIN 40
+const int elbow_pin  = 1;  //PIN 39
+const int fwrist_pin = 2; //PIN 38
+const int bwrist_pin = 3; //PIN 37
 
 //Float pointers to hold address to data location of min/max values
-static float *finger_data, *elbow_data, *fwrist_data, *bwrist_data, *wrist_data, *shoulder_data;
+static float *wrist_data, *shoulder_data;
+static int *finger_data, *elbow_data, *fwrist_data, *bwrist_data;
 
 // This is ran once at the beginning of the program
 void setup(void) 
 {
-  Serial.begin(115200);
+  Serial.begin(57600);
+
+  //wrist_acc = ADXL345(0x1D);
+  //shoulder_acc = ADXL345(0x53);
+    
   // Initialise the ADXL345
   if(!wrist_acc.begin())
   {
-    Serial.println("Ooops, no ADXL345 detected ... Check your wiring!");
+    Serial.print (startOfCharacterDelimiter);    
+    Serial.print ("Ooops, no ADXL345 detected ... Check your wiring!");
+    Serial.print (endOfCharacterDelimiter);   
+    Serial.println (); 
     delay(500);
   }
   //Set the range
@@ -37,32 +49,22 @@ void setup(void)
   // Initialise the ADXL345
   if(!shoulder_acc.begin())
   {
+    Serial.print (startOfCharacterDelimiter);    
     Serial.println("Ooops, no ADXL345 detected ... Check your wiring!");
+    Serial.print (endOfCharacterDelimiter);   
+    Serial.println (); 
     delay(500);
   }
   //Set the range
   shoulder_acc.setRange(ADXL345_RANGE_16G);
   
-  // Initialize L3G4200D on shoulder
- /* if (!s_gyro.init())
-  {
-    Serial.println("Failed to autodetect gyro type!");
-    while (1);
-  }
-  s_gyro.enableDefault();
-
-  // Initialize L3G4200D on wrist
-  if (!w_gyro.init())
-  {
-    Serial.println("Failed to autodetect gyro type!");
-    while (1);
-  }
-  w_gyro.enableDefault();*/
-  
   // Initialize HMC5883L
   while (!compass.begin())
   {
+    Serial.print (startOfCharacterDelimiter);    
     Serial.println("Failed to begin compass sensor!");
+    Serial.print (endOfCharacterDelimiter);   
+    Serial.println (); 
     while(1);
   }
   // Set measurement range
@@ -80,35 +82,59 @@ void setup(void)
 //Calls the calibration function for all sensors 
 void Calibrate_Sensors()
 {
-  Serial.println("About to begin calibrating finger");
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("About to begin calibrating finger");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+
   delay(3000);
   finger_data = Calibrate_Flex(finger_pin);
   
-  Serial.println("About to begin calibrating elbow");
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("About to begin calibrating elbow");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
   delay(3000);
   elbow_data = Calibrate_Flex(elbow_pin);
-  
-  Serial.println("About to begin calibrating forward wrist motion");
+
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print ("About to begin calibrating forward wrist motion");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
   delay(3000);
   fwrist_data = Calibrate_Flex(fwrist_pin);
-  
-  Serial.println("About to begin calibrating backward wrist motion");
+
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print ("About to begin calibrating backward wrist motion");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
   delay(3000);
   bwrist_data = Calibrate_Flex(bwrist_pin);
 
-  Serial.println("Calibrating wrist, twist wrist from one side to another");
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Calibrating wrist, twist wrist from one side to another");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
   delay(3000);
   wrist_data = Calibrate_Acc(wrist_acc);
 
-  Serial.println("Calibrating shoulder, move arm back and forth then rotate side to side");
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Calibrating shoulder, move arm back and forth then rotate side to side");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
   delay(3000);
   shoulder_data = Calibrate_Acc(shoulder_acc);
 }
 
 //Return min and max values of flex sensor
-float *Calibrate_Flex(int flexpin){
-  Serial.println("Calibration Began");
-  static float simple_flex_data[1];
+int *Calibrate_Flex(int flexpin){
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Calibration Began");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+  static int simple_flex_data[1];
+  simple_flex_data[0] = 0;
+  simple_flex_data[1] = 1023;
   int flex_value;
   //Take in a 800 readings and take the min and max values of the readings
   //Will take 8 seconds to complete
@@ -117,20 +143,49 @@ float *Calibrate_Flex(int flexpin){
      flex_value = analogRead(flexpin); // Read flex sensor
      simple_flex_data[0] = min(simple_flex_data[0], flex_value);
      simple_flex_data[1] = max(simple_flex_data[1], flex_value);
+     //Due to all initial values being zero, we take in the minimum right above zero
+     if(simple_flex_data[0] == 0)
+        simple_flex_data[0] = flex_value;
+     if(simple_flex_data[1] == 1023 && flex_value != simple_flex_data[0])
+        simple_flex_data[1] = flex_value;  
      delay(10);
   }
-  //Due to all initial values being zero, we take in the minimum right above zero
-  if(simple_flex_data[0] == 0)
-  {
-     simple_flex_data[0] = flex_value;
-  } 
-  Serial.println("Calibration Ended");
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Minimum Value: ");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);    
+  Serial.print (simple_flex_data[0]);
+  Serial.print (endOfNumberDelimiter);
+  Serial.println ();
+   
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Maximum Value: ");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);        
+  Serial.print (simple_flex_data[1]);  
+  Serial.print (endOfNumberDelimiter);
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Calibration Ended");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+
   return simple_flex_data;  
+  
 }
 
 //Return min and max values of accelerometer sensor
 float *Calibrate_Acc(ADXL345 accelerometer){
-  Serial.println("Calibration Began");
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Calibration Began");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+  
   static float acc_data[5];
   Vector norm = accelerometer.readNormalize();
   float z;
@@ -147,14 +202,78 @@ float *Calibrate_Acc(ADXL345 accelerometer){
   acc_data[3] = max(acc_data[3], norm.XAxis);
   acc_data[4] = max(acc_data[4], norm.YAxis);
   acc_data[5] = max(acc_data[5], norm.ZAxis);
+
+  if(acc_data[5] > 20)
+     acc_data[5] = z;
+  
   delay(10);
   }
+
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Minimum X Axis Value: ");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);    
+  Serial.print (acc_data[0]);
+  Serial.print (endOfNumberDelimiter);
+  Serial.println ();
+   
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Maximum X Axis Value: ");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
   
-  if(acc_data[5] > 20)
-  {
-     acc_data[5] = z;
-  }
-  Serial.println("Calibration Ended"); 
+  Serial.print (startOfNumberDelimiter);        
+  Serial.print (acc_data[3]);  
+  Serial.print (endOfNumberDelimiter);
+  Serial.println ();
+
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Minimum Y Axis Value: ");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);    
+  Serial.print (acc_data[1]);
+  Serial.print (endOfNumberDelimiter);
+  Serial.println ();
+   
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Maximum Y Axis Value: ");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);        
+  Serial.print (acc_data[4]);  
+  Serial.print (endOfNumberDelimiter);
+  Serial.println ();
+
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Minimum Z Axis Value: ");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);    
+  Serial.print (acc_data[2]);
+  Serial.print (endOfNumberDelimiter);
+  Serial.println ();
+   
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Maximum Z Axis Value: ");
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);        
+  Serial.print (acc_data[5]);  
+  Serial.print (endOfNumberDelimiter);
+  Serial.println ();
+
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print ("Calibration Ended"); 
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+  
   return acc_data;
 }
 
@@ -202,7 +321,7 @@ float noTiltCompensate(Vector mag)
 // Tilt compensation
 float tiltCompensate(Vector mag, Vector normAccel)
 {
-  static int *angles = Filtered_Acc_Roll_Pitch(normAccel);
+  static int *angles = Filtered_Acc_Pitch_Roll(normAccel);
   
   if (angles[1] > 0.78 || angles[1] < -0.78 || angles[0] > 0.78 || angles[0] < -0.78)
   {
@@ -325,7 +444,7 @@ uint16_t median_filter(uint16_t datum)
 }
 
 // Returns filtered pitch and roll
-int *Filtered_Acc_Roll_Pitch(Vector norm)
+int *Filtered_Acc_Pitch_Roll(Vector norm)
 {
   static int filt_acc_data[1];
   //Retrive accelerometer angle values
@@ -377,7 +496,7 @@ int Finger_Flex()
 {
   int flexposition, flex_deg;    // Input value from the analog pin.
   flexposition = analogRead(finger_pin); // Read finger motion
-  flex_deg = map(flexposition,finger_data[0],finger_data[1], 115, 300);
+  flex_deg = map(flexposition,finger_data[1],finger_data[0], 115, 300);
   return flex_deg;
 }
 
@@ -393,19 +512,27 @@ int Elbow_Flex()
 // Returns wrist degree angle for flexion
 int Wrist_Flex()
 {
-  int f_pos,b_pos;                // Input value from the analog pin.
-  int final_degree;
+  int f_pos, b_pos, final_degree;
   static int flex_deg[1];
+  
   f_pos = analogRead(fwrist_pin); // Read forward wrist motion
   b_pos = analogRead(bwrist_pin); // Read backward wrist motion
-  flex_deg[0] = map(f_pos,fwrist_data[0],fwrist_data[1], 90, 180);
-  flex_deg[1] = map(b_pos,bwrist_data[1],bwrist_data[0], 0, 90);
-  if(flex_deg[0] == 90)
+  flex_deg[0] = map(f_pos,fwrist_data[1],fwrist_data[0], 90, 180);
+  flex_deg[0] = constrain(flex_deg[0], 90, 180);
+  flex_deg[1] = map(b_pos,bwrist_data[0],bwrist_data[1], 0, 90);
+  flex_deg[1] = constrain(flex_deg[1], 0, 90);
+
+  if(flex_deg[1] > 0 && flex_deg[1] < 90)
     final_degree = flex_deg[1];
-  else if(flex_deg[1] == 0)
+  else if(flex_deg[0] > 90 && flex_deg[0] < 180)
     final_degree = flex_deg[0];
-  else
+  else if(flex_deg[0] == 180)
+    final_degree = 180;
+  else if(flex_deg[0] == 90 || flex_deg[1] == 90)
+    final_degree = 90;
+  else if(flex_deg[1] == 0)
     final_degree = 0;
+    
   return final_degree;
 } 
 
@@ -414,16 +541,17 @@ int Wrist_Roll(Vector norm)
 {
   int max_angle,min_angle;
   static float *min_max_angle;
-  min_max_angle = MaxAccPitchRoll(wrist_data);
   static int *angles;
-  angles = Filtered_Acc_Roll_Pitch(norm);
   int roll = angles[1];
+
+  min_max_angle = MaxAccPitchRoll(wrist_data);
+  angles = Filtered_Acc_Pitch_Roll(norm);
 
   if(min_max_angle[1] > 0)
     min_angle = min_max_angle[1];
   else
     min_angle = 0;
-
+    
   if(min_max_angle[3] < 180)
     max_angle = min_max_angle[3];
   else
@@ -449,18 +577,22 @@ int Shoulder_Pitch(Vector norm)
 {
   int max_angle,min_angle;
   static float *min_max_angle;
-  min_max_angle = MaxAccPitchRoll(shoulder_data);
   static int *angles;
-  angles = Filtered_Acc_Roll_Pitch(norm);
   int pitch = angles[0];
-  
+
+  min_max_angle = MaxAccPitchRoll(shoulder_data);
+  angles = Filtered_Acc_Pitch_Roll(norm);
+
+  //min_angle =  map(min_max_angle[0], 0, 90, 90, 180);    
+  //max_angle =  map(min_max_angle[1], 0, 90, 90, 180);    
+
   if(min_max_angle[0] > 0)
-    min_angle = min_max_angle[1];
+    min_angle = min_max_angle[0];
   else
     min_angle = 0;
 
   if(min_max_angle[2] < 90)
-    max_angle = min_max_angle[3];
+    max_angle = min_max_angle[2];
   else
     max_angle = 90;
     
@@ -485,27 +617,45 @@ void loop(void)
   wrist_flexion = Wrist_Flex();
   finger_flexion = Finger_Flex();
 
-   Serial.print (startOfNumberDelimiter);    
+   //Serial.print ("Shoulder Pitch Degree: ");  
+   Serial.print (startOfDegreeDelimiter);    
    Serial.print (shoulder_pitch);          // send shoulder pitch angle
-   Serial.print (endOfNumberDelimiter);  
+   Serial.print (endOfDegreeDelimiter);  
+   Serial.println ();
+   delay(2);
 
-   Serial.print (startOfNumberDelimiter);    
+   //Serial.print ("Shoulder Yaw Degree: ");
+   Serial.print (startOfDegreeDelimiter);    
    Serial.print (shoulder_yaw);            // send shoulder yaw angle
-   Serial.print (endOfNumberDelimiter);  
+   Serial.print (endOfDegreeDelimiter);  
+   Serial.println ();
+   delay(2);
 
-   Serial.print (startOfNumberDelimiter);    
+   //Serial.print ("Elbow Flex Degree: ");   
+   Serial.print (startOfDegreeDelimiter);    
    Serial.print (elbow_flexion);           // send elbow flexion angle
-   Serial.print (endOfNumberDelimiter);
-
-   Serial.print (startOfNumberDelimiter);    
+   Serial.print (endOfDegreeDelimiter);
+   Serial.println ();
+   delay(2);
+   
+   //Serial.print ("Wrist Roll Degree: ");   
+   Serial.print (startOfDegreeDelimiter);    
    Serial.print (wrist_roll);              // send wrist roll angle
-   Serial.print (endOfNumberDelimiter);
+   Serial.print (endOfDegreeDelimiter);
+   Serial.println ();
+   delay(2);
 
-   Serial.print (startOfNumberDelimiter);    
+   //Serial.print ("Wrist Flex Degree: ");    
+   Serial.print (startOfDegreeDelimiter);    
    Serial.print (wrist_flexion);           // send wrist flexion angle
-   Serial.print (endOfNumberDelimiter);
-
-   Serial.print (startOfNumberDelimiter);    
+   Serial.print (endOfDegreeDelimiter);
+   Serial.println ();
+   delay(2);
+   
+   //Serial.print ("Finger Flex Degree: ");    
+   Serial.print (startOfDegreeDelimiter);    
    Serial.print (finger_flexion);          // send finger flexion angle
-   Serial.print (endOfNumberDelimiter);
+   Serial.print (endOfDegreeDelimiter);
+   Serial.println ();
+   delay(2);
 }
