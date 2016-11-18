@@ -49,7 +49,14 @@ bool ADXL345::begin()
 
     return true;
 }
+///////////////////////////////////////////////////////
 
+void ADXL345::setAddress(uint8_t customAddress)
+{
+	m_Address = customAddress;
+}
+
+///////////////////////////////////////////////////////
 // Set Range
 void ADXL345::setRange(adxl345_range_t range)
 {
@@ -455,7 +462,7 @@ Activites ADXL345::readActivites(void)
 // Write byte to register
 void ADXL345::writeRegister8(uint8_t reg, uint8_t value)
 {
-    Wire.beginTransmission(ADXL345_ADDRESS);
+    Wire.beginTransmission(m_Address);
     #if ARDUINO >= 100
         Wire.write(reg);
         Wire.write(value);
@@ -470,7 +477,7 @@ void ADXL345::writeRegister8(uint8_t reg, uint8_t value)
 uint8_t ADXL345::fastRegister8(uint8_t reg)
 {
     uint8_t value;
-    Wire.beginTransmission(ADXL345_ADDRESS);
+    Wire.beginTransmission(m_Address);
     #if ARDUINO >= 100
         Wire.write(reg);
     #else
@@ -478,7 +485,7 @@ uint8_t ADXL345::fastRegister8(uint8_t reg)
     #endif
     Wire.endTransmission();
 
-    Wire.requestFrom(ADXL345_ADDRESS, 1);
+    Wire.requestFrom(m_Address, 1);
     #if ARDUINO >= 100
         value = Wire.read();
     #else
@@ -493,7 +500,7 @@ uint8_t ADXL345::fastRegister8(uint8_t reg)
 uint8_t ADXL345::readRegister8(uint8_t reg)
 {
     uint8_t value;
-    Wire.beginTransmission(ADXL345_ADDRESS);
+    Wire.beginTransmission(m_Address);
     #if ARDUINO >= 100
         Wire.write(reg);
     #else
@@ -501,8 +508,8 @@ uint8_t ADXL345::readRegister8(uint8_t reg)
     #endif
     Wire.endTransmission();
 
-    Wire.beginTransmission(ADXL345_ADDRESS);
-    Wire.requestFrom(ADXL345_ADDRESS, 1);
+    Wire.beginTransmission(m_Address);
+    Wire.requestFrom(m_Address, 1);
     while(!Wire.available()) {};
     #if ARDUINO >= 100
         value = Wire.read();
@@ -518,7 +525,7 @@ uint8_t ADXL345::readRegister8(uint8_t reg)
 int16_t ADXL345::readRegister16(uint8_t reg)
 {
     int16_t value;
-    Wire.beginTransmission(ADXL345_ADDRESS);
+    Wire.beginTransmission(m_Address);
     #if ARDUINO >= 100
         Wire.write(reg);
     #else
@@ -526,8 +533,8 @@ int16_t ADXL345::readRegister16(uint8_t reg)
     #endif
     Wire.endTransmission();
 
-    Wire.beginTransmission(ADXL345_ADDRESS);
-    Wire.requestFrom(ADXL345_ADDRESS, 2);
+    Wire.beginTransmission(m_Address);
+    Wire.requestFrom(m_Address, 2);
     while(!Wire.available()) {};
     #if ARDUINO >= 100
         uint8_t vla = Wire.read();

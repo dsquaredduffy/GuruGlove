@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #endif
 
 #define ADXL345_ADDRESS              (0x53)
-
+#define ADXL345_ADDRESS_2			 (0x1D)
 #define ADXL345_REG_DEVID            (0x00)
 #define ADXL345_REG_THRESH_TAP       (0x1D) // 1
 #define ADXL345_REG_OFSX             (0x1E)
@@ -146,6 +146,7 @@ class ADXL345
 
 	bool begin(void);
 	void clearSettings(void);
+	void setAddress(uint8_t customAddress);
 
 	Vector readRaw(void);
 	Vector readNormalize(float gravityFactor = ADXL345_GRAVITY_EARTH);
@@ -221,7 +222,8 @@ class ADXL345
 	Vector f;
 	Activites a;
 	adxl345_range_t _range;
-
+	
+	int m_Address;
 	void writeRegister8(uint8_t reg, uint8_t value);
 	uint8_t readRegister8(uint8_t reg);
 	uint8_t fastRegister8(uint8_t reg);
