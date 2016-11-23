@@ -1,11 +1,10 @@
-#include <Wire.h>
 #include <ADXL345.h>
 #include <HMC5883L.h>
 #include <MovingAverageFilter.h>
 #define  STOPPER 0              /* Smaller than any datum */
 #define  MEDIAN_FILTER_SIZE (17)
 
-HMC5883L compass;     //Create magnetomere objects
+HMC5883L compass;     //Create magnetometer objects
 ADXL345 w_acc, s_acc; //Create accelerometer objects
 MovingAverageFilter movingAverageFilter(10);
 
@@ -65,7 +64,7 @@ void setup() {
   if(!w_acc.begin())
   {
     Serial.print (startOfCharacterDelimiter);    
-    Serial.print ("Ooops, Wrist ADXL345 not detected ... Check your wiring!");
+    Serial.print (F("Ooops, Wrist ADXL345 not detected ... Check your wiring!"));
     Serial.print (endOfCharacterDelimiter);   
     Serial.println (); 
     delay(500);
@@ -77,7 +76,7 @@ void setup() {
   if(!s_acc.begin())
   {
     Serial.print (startOfCharacterDelimiter);    
-    Serial.print ("Ooops, Shoulder ADXL345 not detected ... Check your wiring!");
+    Serial.print (F("Ooops, Shoulder ADXL345 not detected ... Check your wiring!"));
     Serial.print (endOfCharacterDelimiter);   
     Serial.println (); 
     delay(500);
@@ -89,7 +88,7 @@ void setup() {
   while (!compass.begin())
   {
     Serial.print (startOfCharacterDelimiter);    
-    Serial.println("Failed to begin compass sensor!");
+    Serial.println(F("Failed to begin compass sensor!"));
     Serial.print (endOfCharacterDelimiter);   
     Serial.println (); 
     delay(500);
@@ -111,7 +110,7 @@ void setup() {
 void Calibrate_Sensors()
 {
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("About to begin calibrating finger");
+  Serial.print (F("About to begin calibrating finger"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
@@ -119,23 +118,23 @@ void Calibrate_Sensors()
   PrintMinMaxFlex(finger_data);
 
   Serial.print (startOfCharacterDelimiter);        
-  Serial.print ("About to begin calibrating upward wrist motion");
+  Serial.print (F("About to begin calibrating upward wrist motion"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
-  upward_wrist_data = Calibrate_Flex(upward_wrist_pin);
+  upward_wrist_data = Calibrate_Flex1(upward_wrist_pin);
   PrintMinMaxFlex(upward_wrist_data);
 
   Serial.print (startOfCharacterDelimiter);        
-  Serial.print ("About to begin calibrating downward wrist motion");
+  Serial.print (F("About to begin calibrating downward wrist motion"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
-  downward_wrist_data = Calibrate_Flex(downward_wrist_pin);
+  downward_wrist_data = Calibrate_Flex2(downward_wrist_pin);
   PrintMinMaxFlex(downward_wrist_data);
 
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("Calibrating wrist, rotate wrist from side to side");
+  Serial.print (F("Calibrating wrist, rotate wrist from side to side"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
@@ -143,23 +142,23 @@ void Calibrate_Sensors()
   PrintMinMaxAngles(wrist_data);
 
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("About to begin calibrating elbow, flex up and down");
+  Serial.print (F("About to begin calibrating elbow, flex up and down"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
-  elbow_data = Calibrate_Flex(elbow_flexion_pin);
+  elbow_data = Calibrate_Flex3(elbow_flexion_pin);
   PrintMinMaxFlex(elbow_data);
   
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("Calibrating shoulder, raise arm up and down from your side");
+  Serial.print (F("Calibrating shoulder, raise arm up and down from your side"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
-  shoulder_data = Calibrate_Acc(s_acc);
+  shoulder_data = Calibrate_Acc1(s_acc);
   PrintMinMaxAngles(shoulder_data);
 
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("Calibrating shoulder, swing arm back and forth");
+  Serial.print (F("Calibrating shoulder, swing arm back and forth"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
@@ -175,18 +174,18 @@ void Calibrate_Sensors()
 int *Calibrate_Acc(ADXL345 accelerometer){
   
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("Calibration Begin");
+  Serial.print (F("Calibration Begin"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
-  
-  struct Angles a;
+  //int *acc_data = (int*)malloc(4);
   static int acc_data[4];
+  struct Angles a;
   //Clear array so that the next sensor will not be affected by previous data
-  memset(acc_data, 0, sizeof(acc_data));
-
+  //memset(acc_data, 0, sizeof(acc_data));
   //Takes 800 samples in 8 seconds
   for(int i=0; i<800; i++)
   {
+    
     Vector norm = accelerometer.readNormalize();    
     a = getAngles(norm);
   
@@ -205,42 +204,71 @@ int *Calibrate_Acc(ADXL345 accelerometer){
   }
   
   Serial.print (startOfCharacterDelimiter);    
-  Serial.print ("Calibration Ended");
+  Serial.print (F("Calibration Ended"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
-
+  
   return acc_data;
+}
+
+//Return min and max values of an accelerometer sensor
+int *Calibrate_Acc1(ADXL345 accelerometer){
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F("Calibration Begin"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+  //int *acc_data = (int*)malloc(4);
+  static int acc_data1[4];
+  struct Angles a;
+  //Clear array so that the next sensor will not be affected by previous data
+  //memset(acc_data, 0, sizeof(acc_data));
+  //Takes 800 samples in 8 seconds
+  for(int i=0; i<800; i++)
+  {
+    
+    Vector norm = accelerometer.readNormalize();    
+    a = getAngles(norm);
+  
+    acc_data1[0] = min(acc_data1[0], a.pitch);
+    acc_data1[1] = max(acc_data1[1], a.pitch);
+    
+    acc_data1[2] = min(acc_data1[2], a.roll);
+    acc_data1[3] = max(acc_data1[3], a.roll);
+
+    //Roll minimum kept coming out to 0 degrees because static variables are automatically zero
+    //This if statement accounts for that because the minimum can be a negative value
+    if(acc_data1[3] == 0)
+      acc_data1[3] = a.roll;
+    
+    delay(10);
+  }
+  
+  Serial.print (startOfCharacterDelimiter);    
+  Serial.print (F("Calibration Ended"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+  
+  return acc_data1;
 }
 
 //Return min and max values of a flex sensor
 int *Calibrate_Flex(int flexpin){
 
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("Calibration Began");
+  Serial.print (F("Calibration Began"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
-  
-  static int simple_flex_data[2];
+
+  //int *simple_flex_data = (int*)malloc(2);
   //Clear array so that the next sensor will not be affected by previous data
-  memset(simple_flex_data, 0, sizeof(simple_flex_data));
+  static int simple_flex_data[2];
+  //memset(simple_flex_data, 0, sizeof(simple_flex_data));
   int flex_value;
   
-  //Takes 800 samples in 8 seconds
   for(int i=0; i<800; i++)
   {
-
-     flex_value = analogRead(flexpin);
-     
-    /*Serial.print (startOfCharacterDelimiter);      
-    Serial.print ("Analog Value: ");
-    Serial.print (endOfCharacterDelimiter);   
-    Serial.println (); 
-  
-    Serial.print (startOfNumberDelimiter);      
-    Serial.print (flex_value);
-    Serial.print (endOfNumberDelimiter);   
-    Serial.println (); */
-     
+     flex_value = analogRead(flexpin);  
      simple_flex_data[0] = min(simple_flex_data[0], flex_value);
      simple_flex_data[1] = max(simple_flex_data[1], flex_value);     
      //Due to all initial values being zero, we take in the minimum right above zero
@@ -250,23 +278,133 @@ int *Calibrate_Flex(int flexpin){
      //of 5V
      if(simple_flex_data[1] == 1023 && flex_value != simple_flex_data[0])
         simple_flex_data[1] = flex_value;  
-        
-     delay(8);
-  }
+     delay(10);
+  }      
   
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("Calibration Ended");
+  Serial.print (F("Calibration Ended"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
+
+  return simple_flex_data;
+}
+
+//Return min and max values of a flex sensor
+int *Calibrate_Flex1(int flexpin){
+
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F("Calibration Began"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+
+  //int *simple_flex_data = (int*)malloc(2);
+  //Clear array so that the next sensor will not be affected by previous data
+  //memset(simple_flex_data, 0, sizeof(simple_flex_data));
+  static int simple_flex_data1[2];
+  int flex_value;
   
-  return simple_flex_data;  
+  for(int i=0; i<800; i++)
+  {
+     flex_value = analogRead(flexpin);  
+     simple_flex_data1[0] = min(simple_flex_data1[0], flex_value);
+     simple_flex_data1[1] = max(simple_flex_data1[1], flex_value);     
+     //Due to all initial values being zero, we take in the minimum right above zero
+     if(simple_flex_data1[0] == 0)
+        simple_flex_data1[0] = flex_value;
+     //No flex sensor should have a max of 1023 because it will never provide a voltage
+     //of 5V
+     if(simple_flex_data1[1] == 1023 && flex_value != simple_flex_data1[0])
+        simple_flex_data1[1] = flex_value;  
+     delay(10);
+  }      
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F("Calibration Ended"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+
+  return simple_flex_data1;
+}
+
+//Return min and max values of a flex sensor
+int *Calibrate_Flex2(int flexpin){
+
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F("Calibration Began"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+
+  //int *simple_flex_data = (int*)malloc(2);
+  //Clear array so that the next sensor will not be affected by previous data
+  //memset(simple_flex_data, 0, sizeof(simple_flex_data));
+  int flex_value;
+  static int simple_flex_data2[2];
+
+  for(int i=0; i<800; i++)
+  {
+     flex_value = analogRead(flexpin);  
+     simple_flex_data2[0] = min(simple_flex_data2[0], flex_value);
+     simple_flex_data2[1] = max(simple_flex_data2[1], flex_value);     
+     //Due to all initial values being zero, we take in the minimum right above zero
+     if(simple_flex_data2[0] == 0)
+        simple_flex_data2[0] = flex_value;
+     //No flex sensor should have a max of 1023 because it will never provide a voltage
+     //of 5V
+     if(simple_flex_data2[1] == 1023 && flex_value != simple_flex_data2[0])
+        simple_flex_data2[1] = flex_value;  
+     delay(10);
+  }      
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F("Calibration Ended"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+
+  return simple_flex_data2;
+}
+
+//Return min and max values of a flex sensor
+int *Calibrate_Flex3(int flexpin){
+
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F("Calibration Began"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+
+  //int *simple_flex_data = (int*)malloc(2);
+  //Clear array so that the next sensor will not be affected by previous data
+  //memset(simple_flex_data, 0, sizeof(simple_flex_data));
+  int flex_value;
+  static int simple_flex_data3[3];
+ 
+  for(int i=0; i<800; i++)
+  {
+     flex_value = analogRead(flexpin);  
+     simple_flex_data3[0] = min(simple_flex_data3[0], flex_value);
+     simple_flex_data3[1] = max(simple_flex_data3[1], flex_value);     
+     //Due to all initial values being zero, we take in the minimum right above zero
+     if(simple_flex_data3[0] == 0)
+        simple_flex_data3[0] = flex_value;
+     //No flex sensor should have a max of 1023 because it will never provide a voltage
+     //of 5V
+     if(simple_flex_data3[1] == 1023 && flex_value != simple_flex_data3[0])
+        simple_flex_data3[1] = flex_value;  
+     delay(10);
+  }      
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F("Calibration Ended"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println (); 
+
+  return simple_flex_data3;
 }
 
 //Return min and max values of accelerometer sensor
 int *Calibrate_Heading(ADXL345 accelerometer){
 
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("Calibration Began");
+  Serial.print (F("Calibration Began"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   //No need to clear this array because it is only written to once
@@ -275,6 +413,18 @@ int *Calibrate_Heading(ADXL345 accelerometer){
   
   for(int i=0; i<800; i++)
   {
+
+    Serial.print (startOfCharacterDelimiter);      
+    Serial.print ("Loop Counter");
+    Serial.print (endOfCharacterDelimiter);   
+    Serial.println (); 
+
+    Serial.print (startOfNumberDelimiter);      
+    Serial.print (i);
+    Serial.print (endOfNumberDelimiter);   
+    Serial.println (); 
+    
+    
     Vector norm = accelerometer.readScaled();    
     heading_value = Calculate_Accurate_Headings(norm);
     //Due to limitations of HMC5883L NAN values are possible so check for them
@@ -291,7 +441,7 @@ int *Calibrate_Heading(ADXL345 accelerometer){
   }
 
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("Calibration Ended");
+  Serial.print (F("Calibration Ended"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   
@@ -521,6 +671,7 @@ int Finger_Flex() {
   // 0   --> Closed Hand
   // 180 --> Open Hand
   flex_deg = map(flex_value,finger_data[1],finger_data[0], 180, 0);
+  flex_deg = constrain(flex_deg, 0, 180);
   //flex_deg = MovingAverage(flex_deg);
   return flex_deg;
 }
@@ -533,7 +684,7 @@ int Elbow_Flex() {
   // 125 --> Elbow not bent
   flex_deg = map(flex_value,elbow_data[1],elbow_data[0], 125, 0);
   //Elbow can not be bent backwards
-  flex_deg = constrain(flex_deg, 125, 0);
+  flex_deg = constrain(flex_deg, 0, 125);
   //flex_deg = MovingAverage(flex_deg);
   return flex_deg;
 } 
@@ -646,8 +797,8 @@ int Shoulder_Pitch(Vector norm) {
 void PrintMinMaxAngles(int *min_max){
   
   Serial.print (startOfCharacterDelimiter);    
-  Serial.print ("------------------------------------");
-  Serial.print (" Minimum Pitch = ");
+  Serial.print (F("------------------------------------"));
+  Serial.print (F(" Minimum Pitch = "));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
   
@@ -657,7 +808,7 @@ void PrintMinMaxAngles(int *min_max){
   Serial.println ();
   
   Serial.print (startOfCharacterDelimiter);    
-  Serial.print (" Maximum Pitch = ");
+  Serial.print (F(" Maximum Pitch = "));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
   
@@ -667,7 +818,7 @@ void PrintMinMaxAngles(int *min_max){
   Serial.println ();
   
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print (" Minimum Roll = ");
+  Serial.print (F(" Minimum Roll = "));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
   
@@ -677,7 +828,7 @@ void PrintMinMaxAngles(int *min_max){
   Serial.println ();
   
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print (" Maximum Roll = ");
+  Serial.print (F(" Maximum Roll = "));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
   
@@ -687,7 +838,7 @@ void PrintMinMaxAngles(int *min_max){
   Serial.println ();
   
   Serial.print (startOfCharacterDelimiter);      
-  Serial.print ("------------------------------------");
+  Serial.print (F("------------------------------------"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
 }
@@ -697,8 +848,8 @@ void PrintMinMaxAngles(int *min_max){
 void PrintMinMaxFlex(int *data){
   
   Serial.print (startOfCharacterDelimiter);        
-  Serial.print ("------------------------------------");
-  Serial.print (" Minimum Flex Value= ");
+  Serial.print (F("------------------------------------"));
+  Serial.print (F(" Minimum Flex Value= "));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
 
@@ -708,7 +859,7 @@ void PrintMinMaxFlex(int *data){
   Serial.println ();
   
   Serial.print (startOfCharacterDelimiter);        
-  Serial.print (" Maximum Flex Value= ");
+  Serial.print (F(" Maximum Flex Value= "));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
 
@@ -718,7 +869,7 @@ void PrintMinMaxFlex(int *data){
   Serial.println ();
   
   Serial.print (startOfCharacterDelimiter);        
-  Serial.print ("------------------------------------");
+  Serial.print (F("------------------------------------"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
 }
@@ -727,8 +878,8 @@ void PrintMinMaxFlex(int *data){
 void PrintMinMaxHeading(int *data){
   
   Serial.print (startOfCharacterDelimiter);        
-  Serial.print ("------------------------------------");
-  Serial.print (" Minimum Heading= ");
+  Serial.print (F("------------------------------------"));
+  Serial.print (F(" Minimum Heading= "));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
 
@@ -738,7 +889,7 @@ void PrintMinMaxHeading(int *data){
   Serial.println ();
   
   Serial.print (startOfCharacterDelimiter);        
-  Serial.print (" Maximum Heading= ");
+  Serial.print (F(" Maximum Heading= "));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
 
@@ -748,12 +899,211 @@ void PrintMinMaxHeading(int *data){
   Serial.println ();
   
   Serial.print (startOfCharacterDelimiter);        
-  Serial.print ("------------------------------------");
+  Serial.print (F("------------------------------------"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println ();
 }
 
 void loop(){
+
+  /*Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (F(" Finger Minimum Flex Value= "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (finger_data[0]);    
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F(" Finger Maximum Flex Value= "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);        
+  Serial.print (finger_data[1]);
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+    Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (F(" Up Minimum Flex Value= "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (upward_wrist_data[0]);    
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F(" Up Maximum Flex Value= "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);        
+  Serial.print (upward_wrist_data[1]);
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+    Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (F(" Down Minimum Flex Value= "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (downward_wrist_data[0]);    
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F(" Down Maximum Flex Value= "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);        
+  Serial.print (downward_wrist_data[1]);
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+    Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (F(" Elbow Minimum Flex Value= "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (elbow_data[0]);    
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F(" Elbow Maximum Flex Value= "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);        
+  Serial.print (elbow_data[1]);
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+
+
+  Serial.print (startOfCharacterDelimiter);    
+  Serial.print (F("------------------------------------"));
+  Serial.print (F(" Shoulder Minimum Pitch = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);        
+  Serial.print (shoulder_data[0]);    
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);    
+  Serial.print (F(" Shoulder Maximum Pitch = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);       
+  Serial.print (shoulder_data[1]);
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F(" Shoulder Minimum Roll = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (shoulder_data[2]);
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F(" Shoulder Maximum Roll = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (shoulder_data[3]);
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F("------------------------------------"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+
+    Serial.print (startOfCharacterDelimiter);    
+  Serial.print (F("------------------------------------"));
+  Serial.print (F(" Wrist Minimum Pitch = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);        
+  Serial.print (wrist_data[0]);    
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);    
+  Serial.print (F(" Wrist Maximum Pitch = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);       
+  Serial.print (wrist_data[1]);
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F(" Wrist Minimum Roll = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (wrist_data[2]);
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F(" Wrist Maximum Roll = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (wrist_data[3]);
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+  
+  Serial.print (startOfCharacterDelimiter);      
+  Serial.print (F("------------------------------------"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();*/
 
    int shoulder_pitch, shoulder_yaw, elbow_flexion;
    int wrist_roll, wrist_flexion, finger_flexion;
@@ -814,6 +1164,6 @@ void loop(){
    Serial.print (endOfDegreeDelimiter);
    Serial.println ();
    delay(5);
-
+  
    //Takes a total of 21 milliseconds all degree values to be sent
 }
