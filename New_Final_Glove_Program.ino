@@ -84,7 +84,7 @@ void setup() {
   //Set the range
   s_acc.setRange(ADXL345_RANGE_16G);  
 
-  // Initialize HMC5883L
+  /*// Initialize HMC5883L
   while (!compass.begin())
   {
     Serial.print (startOfCharacterDelimiter);    
@@ -100,7 +100,7 @@ void setup() {
   // Set data rate
   compass.setDataRate(HMC5883L_DATARATE_30HZ);
   // Set number of samples averaged
-  compass.setSamples(HMC5883L_SAMPLES_8);
+  compass.setSamples(HMC5883L_SAMPLES_8);*/
 
   Calibrate_Sensors();
 }
@@ -157,13 +157,13 @@ void Calibrate_Sensors()
   shoulder_data = Calibrate_Acc1(s_acc);
   PrintMinMaxAngles(shoulder_data);
 
-  Serial.print (startOfCharacterDelimiter);      
+  /*Serial.print (startOfCharacterDelimiter);      
   Serial.print (F("Calibrating shoulder, swing arm back and forth"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
   heading_data = Calibrate_Heading(s_acc);
-  PrintMinMaxHeading(heading_data);  
+  PrintMinMaxHeading(heading_data);*/
 }
 
 //////////////////////////////////
@@ -184,8 +184,7 @@ int *Calibrate_Acc(ADXL345 accelerometer){
   //memset(acc_data, 0, sizeof(acc_data));
   //Takes 800 samples in 8 seconds
   for(int i=0; i<800; i++)
-  {
-    
+  {  
     Vector norm = accelerometer.readNormalize();    
     a = getAngles(norm);
   
@@ -682,6 +681,8 @@ int Elbow_Flex() {
   flex_value = analogRead(elbow_flexion_pin); // Read elbow motion
   // 0   --> Elbow bent up fully
   // 125 --> Elbow not bent
+  /*if(elbow_data[0] < 250)
+    elbow_data[0] = 250;*/
   flex_deg = map(flex_value,elbow_data[1],elbow_data[0], 125, 0);
   //Elbow can not be bent backwards
   flex_deg = constrain(flex_deg, 0, 125);
@@ -730,7 +731,7 @@ int Wrist_Roll(Vector norm) {
     min_angle = -180;
 
   //This is to make the flat placement on the palm the flat placement on robotic hand
-  if(wrist_data[3] > -20)
+  if(wrist_data[3] < -20)
     max_angle = wrist_data[3];
   else
     max_angle = -20;
@@ -906,205 +907,6 @@ void PrintMinMaxHeading(int *data){
 
 void loop(){
 
-  /*Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (F(" Finger Minimum Flex Value= "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (finger_data[0]);    
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F(" Finger Maximum Flex Value= "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);        
-  Serial.print (finger_data[1]);
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-    Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (F(" Up Minimum Flex Value= "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (upward_wrist_data[0]);    
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F(" Up Maximum Flex Value= "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);        
-  Serial.print (upward_wrist_data[1]);
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-    Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (F(" Down Minimum Flex Value= "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (downward_wrist_data[0]);    
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F(" Down Maximum Flex Value= "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);        
-  Serial.print (downward_wrist_data[1]);
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-    Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (F(" Elbow Minimum Flex Value= "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (elbow_data[0]);    
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F(" Elbow Maximum Flex Value= "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);        
-  Serial.print (elbow_data[1]);
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-
-
-  Serial.print (startOfCharacterDelimiter);    
-  Serial.print (F("------------------------------------"));
-  Serial.print (F(" Shoulder Minimum Pitch = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfNumberDelimiter);        
-  Serial.print (shoulder_data[0]);    
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);    
-  Serial.print (F(" Shoulder Maximum Pitch = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfNumberDelimiter);       
-  Serial.print (shoulder_data[1]);
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);      
-  Serial.print (F(" Shoulder Minimum Roll = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (shoulder_data[2]);
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);      
-  Serial.print (F(" Shoulder Maximum Roll = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (shoulder_data[3]);
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);      
-  Serial.print (F("------------------------------------"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-
-    Serial.print (startOfCharacterDelimiter);    
-  Serial.print (F("------------------------------------"));
-  Serial.print (F(" Wrist Minimum Pitch = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfNumberDelimiter);        
-  Serial.print (wrist_data[0]);    
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);    
-  Serial.print (F(" Wrist Maximum Pitch = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfNumberDelimiter);       
-  Serial.print (wrist_data[1]);
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);      
-  Serial.print (F(" Wrist Minimum Roll = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (wrist_data[2]);
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);      
-  Serial.print (F(" Wrist Maximum Roll = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (wrist_data[3]);
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-  
-  Serial.print (startOfCharacterDelimiter);      
-  Serial.print (F("------------------------------------"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();*/
-
    int shoulder_pitch, shoulder_yaw, elbow_flexion;
    int wrist_roll, wrist_flexion, finger_flexion;
    
@@ -1117,11 +919,16 @@ void loop(){
 
    //Obtain all six angles needed for movement
    shoulder_pitch = Shoulder_Pitch(shoulder_norm);
-   shoulder_yaw = Shoulder_Yaw(shoulder_scaled);
+   //shoulder_yaw = Shoulder_Yaw(shoulder_scaled);
    elbow_flexion = Elbow_Flex();
+   //int flex_value = analogRead(elbow_flexion_pin); // Read elbow motion
+   //int filt_flex_value = MovingAverage(elbow_flexion);
    wrist_roll = Wrist_Roll(wrist_norm);
    wrist_flexion = Wrist_Flex();
    finger_flexion = Finger_Flex(); 
+   
+   //flex_value = analogRead(elbow_flexion_pin); // Read elbow motion
+
 
    //Serial.print ("Shoulder Pitch Degree: "); //FOR DEBUGGING 
    Serial.print (startOfDegreeDelimiter);    
@@ -1130,12 +937,67 @@ void loop(){
    Serial.println ();
    delay(2);
 
-   //Serial.print ("Shoulder Yaw Degree: "); //FOR DEBUGGING 
+   /*//Serial.print ("Shoulder Yaw Degree: "); //FOR DEBUGGING 
    Serial.print (startOfDegreeDelimiter);    
    Serial.print (shoulder_yaw);            // send shoulder yaw angle
    Serial.print (endOfDegreeDelimiter);  
    Serial.println ();
    delay(2);
+
+  /*Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("************************"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("Analog Value = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (flex_value);    
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();  
+
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("Degree Value = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (elbow_flexion);    
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();   
+
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("------------------------------------"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();  
+
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("Filtered Degree Value = "));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();
+
+  Serial.print (startOfNumberDelimiter);      
+  Serial.print (filt_flex_value);    
+  Serial.print (endOfNumberDelimiter);   
+  Serial.println ();   
+
+  Serial.print (startOfCharacterDelimiter);        
+  Serial.print (F("************************"));
+  Serial.print (endOfCharacterDelimiter);   
+  Serial.println ();*/
 
    //Serial.print ("Elbow Flex Degree: "); //FOR DEBUGGING 
    Serial.print (startOfDegreeDelimiter);    
@@ -1151,19 +1013,19 @@ void loop(){
    Serial.println ();
    delay(2);
 
-   //Serial.print ("Wrist Flex Degree: "); //FOR DEBUGGING   
+   /*//Serial.print ("Wrist Flex Degree: "); //FOR DEBUGGING   
    Serial.print (startOfDegreeDelimiter);    
    Serial.print (wrist_flexion);           // send wrist flexion angle
    Serial.print (endOfDegreeDelimiter);
    Serial.println ();
-   delay(5);
+   delay(5);*/
    
-   //Serial.print ("Finger Flex Degree: "); //FOR DEBUGGING 
+  /* //Serial.print ("Finger Flex Degree: "); //FOR DEBUGGING 
    Serial.print (startOfDegreeDelimiter);    
    Serial.print (finger_flexion);          // send finger flexion angle
    Serial.print (endOfDegreeDelimiter);
    Serial.println ();
-   delay(5);
+   delay(5);*/
   
    //Takes a total of 21 milliseconds all degree values to be sent
 }

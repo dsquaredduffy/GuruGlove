@@ -25,8 +25,8 @@ void setup() {
   Serial.flush();
   Serial.println (F("WAITING FOR DATA ..."));
   shoulder_lift_servo.attach(11);    
-  shoulder_rotate_servo.attach(12);   
-  elbow_servo.attach(10);  
+  shoulder_rotate_servo.attach(10);   
+  elbow_servo.attach(12);  
   wrist_rotation_servo.attach(8); 
   wrist_flexion_servo.attach(9); 
   finger_servo.attach(7);
@@ -42,45 +42,45 @@ void processDegrees (const long degree)
     {
      case Shoulder_Pitch: 
       shoulder_pitch = degree;
-      whichNumber = Shoulder_Yaw;
-      shoulder_lift_servo.write(shoulder_pitch);
+      whichNumber = Elbow_Flexion;
+      //shoulder_lift_servo.write(shoulder_pitch);
       Serial.print (F("Shoulder Pitch = "));
       break;
       
-    case Shoulder_Yaw: 
+    /*case Shoulder_Yaw: 
       shoulder_yaw = degree;
       whichNumber = Elbow_Flexion;
       shoulder_rotate_servo.write(shoulder_yaw);
       Serial.print (F("Shoulder Yaw = "));
-      break;
+      break;*/
 
     case Elbow_Flexion: 
       elbow_flexion = degree;
       whichNumber = Wrist_Roll;
-      //elbow_servo.write(elbow_flexion);
+      shoulder_lift_servo.write(elbow_flexion);
       Serial.print (F("Elbow Flexion Angle = "));
       break;
 
      case Wrist_Roll: 
       wrist_roll = degree;
-      whichNumber = Wrist_Flexion;
-      //wrist_rotation_servo.write(wrist_roll);
+      whichNumber = Shoulder_Pitch;
+      wrist_rotation_servo.write(wrist_roll);
       Serial.print (F("Wrist Roll = "));
       break;
       
-    case Wrist_Flexion: 
+    /*case Wrist_Flexion: 
       wrist_flexion = degree;
       whichNumber = Finger_Flexion;
-      //wrist_flexion_servo.write(wrist_flexion);
+      wrist_flexion_servo.write(wrist_flexion);
       Serial.print (F("Forward Wrist Motion = "));
-      break;
+      break;*/
 
-    case Finger_Flexion: 
+    /*case Finger_Flexion: 
       finger_flexion = degree;
       whichNumber = Shoulder_Pitch;
       //finger_servo.write(finger_flexion);
       Serial.print (F("Finger Flexion Angle = "));
-      break; 
+      break; */
     }
     
   Serial.println (degree);
