@@ -1,10 +1,10 @@
-#include <ADXL345.h>
-#include <HMC5883L.h>
-#include <MovingAverageFilter.h>
-#define  STOPPER 0              /* Smaller than any datum */
-#define  MEDIAN_FILTER_SIZE (17)
+#include <ADXL345.h>             //USED FOR I2C COMMUNICATION
+#include <HMC5883L.h>            //USED FOR I2C COMMUNICATION
+#include <MovingAverageFilter.h> //USED FOR YAW FILTERING
+#define  STOPPER 0               /* Smaller than any datum */
+#define  MEDIAN_FILTER_SIZE (9) /* Used for ADXL345 filtering*/
 
-HMC5883L compass;     //Create magnetometer objects
+HMC5883L compass;     //Create magnetometer object
 ADXL345 w_acc, s_acc; //Create accelerometer objects
 MovingAverageFilter movingAverageFilter(10);
 
@@ -20,17 +20,19 @@ const char endOfCharacterDelimiter   = ']';
 
 // Pin values for flex sensor inputs
 const int finger_flexion_pin = 0;   //PIN 40
-const int downward_wrist_pin = 1;   //PIN 39
-const int upward_wrist_pin   = 2;   //PIN 38
+const int downward_wrist_pin = 2;   //PIN 39
+const int upward_wrist_pin   = 1;   //PIN 38
 const int elbow_flexion_pin  = 3;   //PIN 37
 
-const int dataPointsCount = 10;
 //Pointers used to hold min and max data for sensors / only written to once
 //Because these are static and global they are initliazed to zero
 static int *wrist_data, *shoulder_data, *heading_data;
 static int *finger_data, *elbow_data, *upward_wrist_data, *downward_wrist_data;
+
 static int previous_heading = 200;
 
+//Variables used for Moving Average Filter
+const int dataPointsCount = 10;
 static int finger_average[dataPointsCount], elbow_average[dataPointsCount], wrist_average[dataPointsCount];
 static int f,w,e;
 
@@ -47,6 +49,7 @@ struct Angles {int pitch, roll;};
 struct Angles getAngles(Vector norm) {
     int pitch = -(atan2(norm.XAxis, sqrt(norm.YAxis*norm.YAxis + norm.ZAxis*norm.ZAxis))*180.0)/M_PI;
     int roll  = (atan2(norm.YAxis, norm.ZAxis)*180.0)/M_PI;
+    
     Angles angles = { pitch, roll };
     return angles;    
 }
@@ -84,7 +87,7 @@ void setup() {
   //Set the range
   s_acc.setRange(ADXL345_RANGE_16G);  
 
-  /*// Initialize HMC5883L
+  // Initialize HMC5883L
   while (!compass.begin())
   {
     Serial.print (startOfCharacterDelimiter);    
@@ -100,7 +103,7 @@ void setup() {
   // Set data rate
   compass.setDataRate(HMC5883L_DATARATE_30HZ);
   // Set number of samples averaged
-  compass.setSamples(HMC5883L_SAMPLES_8);*/
+  compass.setSamples(HMC5883L_SAMPLES_8);
 
   Calibrate_Sensors();
 }
@@ -114,7 +117,7 @@ void Calibrate_Sensors()
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
-  finger_data = Calibrate_Flex(finger_flexion_pin);
+  finger_data = Calibrate_Finger_Flex(finger_flexion_pin);
   PrintMinMaxFlex(finger_data);
 
   Serial.print (startOfCharacterDelimiter);        
@@ -122,7 +125,7 @@ void Calibrate_Sensors()
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
-  upward_wrist_data = Calibrate_Flex1(upward_wrist_pin);
+  upward_wrist_data = Calibrate_Up_Flex(upward_wrist_pin);
   PrintMinMaxFlex(upward_wrist_data);
 
   Serial.print (startOfCharacterDelimiter);        
@@ -130,7 +133,7 @@ void Calibrate_Sensors()
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
-  downward_wrist_data = Calibrate_Flex2(downward_wrist_pin);
+  downward_wrist_data = Calibrate_Down_Flex(downward_wrist_pin);
   PrintMinMaxFlex(downward_wrist_data);
 
   Serial.print (startOfCharacterDelimiter);      
@@ -138,7 +141,7 @@ void Calibrate_Sensors()
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
-  wrist_data = Calibrate_Acc(w_acc);
+  wrist_data = Calibrate_Wrist_Acc(w_acc);
   PrintMinMaxAngles(wrist_data);
 
   Serial.print (startOfCharacterDelimiter);      
@@ -146,7 +149,7 @@ void Calibrate_Sensors()
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
-  elbow_data = Calibrate_Flex3(elbow_flexion_pin);
+  elbow_data = Calibrate_Elbow_Flex(elbow_flexion_pin);
   PrintMinMaxFlex(elbow_data);
   
   Serial.print (startOfCharacterDelimiter);      
@@ -154,16 +157,16 @@ void Calibrate_Sensors()
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
-  shoulder_data = Calibrate_Acc1(s_acc);
+  shoulder_data = Calibrate_Shoulder_Acc(s_acc);
   PrintMinMaxAngles(shoulder_data);
 
-  /*Serial.print (startOfCharacterDelimiter);      
+  Serial.print (startOfCharacterDelimiter);      
   Serial.print (F("Calibrating shoulder, swing arm back and forth"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   delay(3000);
   heading_data = Calibrate_Heading(s_acc);
-  PrintMinMaxHeading(heading_data);*/
+  PrintMinMaxHeading(heading_data);
 }
 
 //////////////////////////////////
@@ -171,33 +174,30 @@ void Calibrate_Sensors()
 //////////////////////////////////
 
 //Return min and max values of an accelerometer sensor
-int *Calibrate_Acc(ADXL345 accelerometer){
+int *Calibrate_Wrist_Acc(ADXL345 accelerometer){
   
   Serial.print (startOfCharacterDelimiter);      
   Serial.print (F("Calibration Begin"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
-  //int *acc_data = (int*)malloc(4);
-  static int acc_data[4];
+  static int wrist_acc_data[4];
   struct Angles a;
-  //Clear array so that the next sensor will not be affected by previous data
-  //memset(acc_data, 0, sizeof(acc_data));
   //Takes 800 samples in 8 seconds
   for(int i=0; i<800; i++)
   {  
     Vector norm = accelerometer.readNormalize();    
     a = getAngles(norm);
   
-    acc_data[0] = min(acc_data[0], a.pitch);
-    acc_data[1] = max(acc_data[1], a.pitch);
+    wrist_acc_data[0] = min(wrist_acc_data[0], a.pitch);
+    wrist_acc_data[1] = max(wrist_acc_data[1], a.pitch);
     
-    acc_data[2] = min(acc_data[2], a.roll);
-    acc_data[3] = max(acc_data[3], a.roll);
+    wrist_acc_data[2] = min(wrist_acc_data[2], a.roll);
+    wrist_acc_data[3] = max(wrist_acc_data[3], a.roll);
 
     //Roll minimum kept coming out to 0 degrees because static variables are automatically zero
     //This if statement accounts for that because the minimum can be a negative value
-    if(acc_data[3] == 0)
-      acc_data[3] = a.roll;
+    if(wrist_acc_data[3] == 0)
+      wrist_acc_data[3] = a.roll;
     
     delay(10);
   }
@@ -207,38 +207,34 @@ int *Calibrate_Acc(ADXL345 accelerometer){
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   
-  return acc_data;
+  return wrist_acc_data;
 }
 
 //Return min and max values of an accelerometer sensor
-int *Calibrate_Acc1(ADXL345 accelerometer){
+int *Calibrate_Shoulder_Acc(ADXL345 accelerometer){
   
   Serial.print (startOfCharacterDelimiter);      
   Serial.print (F("Calibration Begin"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
-  //int *acc_data = (int*)malloc(4);
-  static int acc_data1[4];
+  static int shoulder_acc_data1[4];
   struct Angles a;
-  //Clear array so that the next sensor will not be affected by previous data
-  //memset(acc_data, 0, sizeof(acc_data));
   //Takes 800 samples in 8 seconds
   for(int i=0; i<800; i++)
   {
-    
     Vector norm = accelerometer.readNormalize();    
     a = getAngles(norm);
   
-    acc_data1[0] = min(acc_data1[0], a.pitch);
-    acc_data1[1] = max(acc_data1[1], a.pitch);
+    shoulder_acc_data1[0] = min(shoulder_acc_data1[0], a.pitch);
+    shoulder_acc_data1[1] = max(shoulder_acc_data1[1], a.pitch);
     
-    acc_data1[2] = min(acc_data1[2], a.roll);
-    acc_data1[3] = max(acc_data1[3], a.roll);
+    shoulder_acc_data1[2] = min(shoulder_acc_data1[2], a.roll);
+    shoulder_acc_data1[3] = max(shoulder_acc_data1[3], a.roll);
 
     //Roll minimum kept coming out to 0 degrees because static variables are automatically zero
     //This if statement accounts for that because the minimum can be a negative value
-    if(acc_data1[3] == 0)
-      acc_data1[3] = a.roll;
+    if(shoulder_acc_data1[3] == 0)
+      shoulder_acc_data1[3] = a.roll;
     
     delay(10);
   }
@@ -248,35 +244,32 @@ int *Calibrate_Acc1(ADXL345 accelerometer){
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
   
-  return acc_data1;
+  return shoulder_acc_data1;
 }
 
 //Return min and max values of a flex sensor
-int *Calibrate_Flex(int flexpin){
+int *Calibrate_Finger_Flex(int flexpin){
 
   Serial.print (startOfCharacterDelimiter);      
   Serial.print (F("Calibration Began"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
 
-  //int *simple_flex_data = (int*)malloc(2);
-  //Clear array so that the next sensor will not be affected by previous data
-  static int simple_flex_data[2];
-  //memset(simple_flex_data, 0, sizeof(simple_flex_data));
+  static int finger_flex_data[2];
   int flex_value;
   
   for(int i=0; i<800; i++)
   {
      flex_value = analogRead(flexpin);  
-     simple_flex_data[0] = min(simple_flex_data[0], flex_value);
-     simple_flex_data[1] = max(simple_flex_data[1], flex_value);     
+     finger_flex_data[0] = min(finger_flex_data[0], flex_value);
+     finger_flex_data[1] = max(finger_flex_data[1], flex_value);     
      //Due to all initial values being zero, we take in the minimum right above zero
-     if(simple_flex_data[0] == 0)
-        simple_flex_data[0] = flex_value;
+     if(finger_flex_data[0] == 0)
+        finger_flex_data[0] = flex_value;
      //No flex sensor should have a max of 1023 because it will never provide a voltage
      //of 5V
-     if(simple_flex_data[1] == 1023 && flex_value != simple_flex_data[0])
-        simple_flex_data[1] = flex_value;  
+     if(finger_flex_data[1] == 1023 && flex_value != finger_flex_data[0])
+        finger_flex_data[1] = flex_value;  
      delay(10);
   }      
   
@@ -285,35 +278,32 @@ int *Calibrate_Flex(int flexpin){
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
 
-  return simple_flex_data;
+  return finger_flex_data;
 }
 
 //Return min and max values of a flex sensor
-int *Calibrate_Flex1(int flexpin){
+int *Calibrate_Up_Flex(int flexpin){
 
   Serial.print (startOfCharacterDelimiter);      
   Serial.print (F("Calibration Began"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
 
-  //int *simple_flex_data = (int*)malloc(2);
-  //Clear array so that the next sensor will not be affected by previous data
-  //memset(simple_flex_data, 0, sizeof(simple_flex_data));
-  static int simple_flex_data1[2];
+  static int up_flex_data[2];
   int flex_value;
   
   for(int i=0; i<800; i++)
   {
      flex_value = analogRead(flexpin);  
-     simple_flex_data1[0] = min(simple_flex_data1[0], flex_value);
-     simple_flex_data1[1] = max(simple_flex_data1[1], flex_value);     
+     up_flex_data[0] = min(up_flex_data[0], flex_value);
+     up_flex_data[1] = max(up_flex_data[1], flex_value);     
      //Due to all initial values being zero, we take in the minimum right above zero
-     if(simple_flex_data1[0] == 0)
-        simple_flex_data1[0] = flex_value;
+     if(up_flex_data[0] == 0)
+        up_flex_data[0] = flex_value;
      //No flex sensor should have a max of 1023 because it will never provide a voltage
      //of 5V
-     if(simple_flex_data1[1] == 1023 && flex_value != simple_flex_data1[0])
-        simple_flex_data1[1] = flex_value;  
+     if(up_flex_data[1] == 1023 && flex_value != up_flex_data[0])
+        up_flex_data[1] = flex_value;  
      delay(10);
   }      
   
@@ -322,35 +312,32 @@ int *Calibrate_Flex1(int flexpin){
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
 
-  return simple_flex_data1;
+  return up_flex_data;
 }
 
 //Return min and max values of a flex sensor
-int *Calibrate_Flex2(int flexpin){
+int *Calibrate_Down_Flex(int flexpin){
 
   Serial.print (startOfCharacterDelimiter);      
   Serial.print (F("Calibration Began"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
 
-  //int *simple_flex_data = (int*)malloc(2);
-  //Clear array so that the next sensor will not be affected by previous data
-  //memset(simple_flex_data, 0, sizeof(simple_flex_data));
   int flex_value;
-  static int simple_flex_data2[2];
+  static int down_flex_data[2];
 
   for(int i=0; i<800; i++)
   {
      flex_value = analogRead(flexpin);  
-     simple_flex_data2[0] = min(simple_flex_data2[0], flex_value);
-     simple_flex_data2[1] = max(simple_flex_data2[1], flex_value);     
+     down_flex_data[0] = min(down_flex_data[0], flex_value);
+     down_flex_data[1] = max(down_flex_data[1], flex_value);     
      //Due to all initial values being zero, we take in the minimum right above zero
-     if(simple_flex_data2[0] == 0)
-        simple_flex_data2[0] = flex_value;
+     if(down_flex_data[0] == 0)
+        down_flex_data[0] = flex_value;
      //No flex sensor should have a max of 1023 because it will never provide a voltage
      //of 5V
-     if(simple_flex_data2[1] == 1023 && flex_value != simple_flex_data2[0])
-        simple_flex_data2[1] = flex_value;  
+     if(down_flex_data[1] == 1023 && flex_value != down_flex_data[0])
+        down_flex_data[1] = flex_value;  
      delay(10);
   }      
   
@@ -359,35 +346,32 @@ int *Calibrate_Flex2(int flexpin){
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
 
-  return simple_flex_data2;
+  return down_flex_data;
 }
 
 //Return min and max values of a flex sensor
-int *Calibrate_Flex3(int flexpin){
+int *Calibrate_Elbow_Flex(int flexpin){
 
   Serial.print (startOfCharacterDelimiter);      
   Serial.print (F("Calibration Began"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
 
-  //int *simple_flex_data = (int*)malloc(2);
-  //Clear array so that the next sensor will not be affected by previous data
-  //memset(simple_flex_data, 0, sizeof(simple_flex_data));
+  static int elbow_flex_data[3];
   int flex_value;
-  static int simple_flex_data3[3];
- 
+
   for(int i=0; i<800; i++)
   {
      flex_value = analogRead(flexpin);  
-     simple_flex_data3[0] = min(simple_flex_data3[0], flex_value);
-     simple_flex_data3[1] = max(simple_flex_data3[1], flex_value);     
+     elbow_flex_data[0] = min(elbow_flex_data[0], flex_value);
+     elbow_flex_data[1] = max(elbow_flex_data[1], flex_value);     
      //Due to all initial values being zero, we take in the minimum right above zero
-     if(simple_flex_data3[0] == 0)
-        simple_flex_data3[0] = flex_value;
+     if(elbow_flex_data[0] == 0)
+        elbow_flex_data[0] = flex_value;
      //No flex sensor should have a max of 1023 because it will never provide a voltage
      //of 5V
-     if(simple_flex_data3[1] == 1023 && flex_value != simple_flex_data3[0])
-        simple_flex_data3[1] = flex_value;  
+     if(elbow_flex_data[1] == 1023 && flex_value != elbow_flex_data[0])
+        elbow_flex_data[1] = flex_value;  
      delay(10);
   }      
   
@@ -396,7 +380,7 @@ int *Calibrate_Flex3(int flexpin){
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
 
-  return simple_flex_data3;
+  return elbow_flex_data;
 }
 
 //Return min and max values of accelerometer sensor
@@ -406,24 +390,12 @@ int *Calibrate_Heading(ADXL345 accelerometer){
   Serial.print (F("Calibration Began"));
   Serial.print (endOfCharacterDelimiter);   
   Serial.println (); 
-  //No need to clear this array because it is only written to once
+
   static int data[2];
   float heading_value;
   
   for(int i=0; i<800; i++)
-  {
-
-    Serial.print (startOfCharacterDelimiter);      
-    Serial.print ("Loop Counter");
-    Serial.print (endOfCharacterDelimiter);   
-    Serial.println (); 
-
-    Serial.print (startOfNumberDelimiter);      
-    Serial.print (i);
-    Serial.print (endOfNumberDelimiter);   
-    Serial.println (); 
-    
-    
+  {    
     Vector norm = accelerometer.readScaled();    
     heading_value = Calculate_Accurate_Headings(norm);
     //Due to limitations of HMC5883L NAN values are possible so check for them
@@ -460,6 +432,7 @@ int MovingAverage(int input)
 float MovingAverageFilter(int data, char option)
 {
   int out = 0;
+  //FINGER FLEX DEGREE
   if(option == 'f'){
   finger_average[f] = data;
   f = (f+1) % dataPointsCount;
@@ -468,6 +441,7 @@ float MovingAverageFilter(int data, char option)
     out += finger_average[i];
   }
 
+  //ELBOW FLEX DEGREE
   if(option == 'e'){
   elbow_average[e] = data;
   e = (e+1) % dataPointsCount;
@@ -476,6 +450,7 @@ float MovingAverageFilter(int data, char option)
     out += elbow_average[i];
   }
 
+  //WRIST FLEX DEGREE
   if(option == 'w'){
   wrist_average[w] = data;
   w = (w+1) % dataPointsCount;
@@ -669,9 +644,9 @@ int Finger_Flex() {
   flex_value = analogRead(finger_flexion_pin); // Read finger motion
   // 0   --> Closed Hand
   // 180 --> Open Hand
-  flex_deg = map(flex_value,finger_data[1],finger_data[0], 180, 0);
-  flex_deg = constrain(flex_deg, 0, 180);
-  //flex_deg = MovingAverage(flex_deg);
+  flex_deg = map(flex_value,finger_data[1],finger_data[0], 90, 180);
+  flex_deg = constrain(flex_deg, 90, 180);
+  flex_deg = MovingAverageFilter(flex_deg, 'f');
   return flex_deg;
 }
 
@@ -681,12 +656,10 @@ int Elbow_Flex() {
   flex_value = analogRead(elbow_flexion_pin); // Read elbow motion
   // 0   --> Elbow bent up fully
   // 125 --> Elbow not bent
-  /*if(elbow_data[0] < 250)
-    elbow_data[0] = 250;*/
-  flex_deg = map(flex_value,elbow_data[1],elbow_data[0], 125, 0);
+  flex_deg = map(flex_value,elbow_data[1],elbow_data[0], 135, 0);
   //Elbow can not be bent backwards
-  flex_deg = constrain(flex_deg, 0, 125);
-  //flex_deg = MovingAverage(flex_deg);
+  flex_deg = constrain(flex_deg, 0, 135);
+  flex_deg = MovingAverageFilter(flex_deg, 'e');
   return flex_deg;
 } 
 
@@ -713,7 +686,7 @@ int Wrist_Flex() {
   else
     final_degree = down_flex_deg;
 
-  //final_degree = MovingAverage(final_degree);
+  final_degree = MovingAverageFilter(final_degree, 'w');
   
   return final_degree;
 } 
@@ -760,6 +733,8 @@ int Shoulder_Yaw(Vector scaled) {
   yaw = constrain(yaw, 0, 135);
   //Save heading in case a NAN value is found in next iteration
   previous_heading = heading_value;
+  yaw = MovingAverage(yaw);
+  
   return yaw;
 }
 
@@ -786,6 +761,8 @@ int Shoulder_Pitch(Vector norm) {
   int pitch = map(a.pitch, max_angle, min_angle, 180, 0);
   // Motor can not move more than 0 to 180
   pitch = constrain(pitch, 0, 180);
+
+  pitch = median_filter(pitch);
   
   return pitch;
 }
@@ -919,16 +896,11 @@ void loop(){
 
    //Obtain all six angles needed for movement
    shoulder_pitch = Shoulder_Pitch(shoulder_norm);
-   //shoulder_yaw = Shoulder_Yaw(shoulder_scaled);
+   shoulder_yaw = Shoulder_Yaw(shoulder_scaled);
    elbow_flexion = Elbow_Flex();
-   //int flex_value = analogRead(elbow_flexion_pin); // Read elbow motion
-   //int filt_flex_value = MovingAverage(elbow_flexion);
    wrist_roll = Wrist_Roll(wrist_norm);
    wrist_flexion = Wrist_Flex();
    finger_flexion = Finger_Flex(); 
-   
-   //flex_value = analogRead(elbow_flexion_pin); // Read elbow motion
-
 
    //Serial.print ("Shoulder Pitch Degree: "); //FOR DEBUGGING 
    Serial.print (startOfDegreeDelimiter);    
@@ -937,67 +909,12 @@ void loop(){
    Serial.println ();
    delay(2);
 
-   /*//Serial.print ("Shoulder Yaw Degree: "); //FOR DEBUGGING 
+   //Serial.print ("Shoulder Yaw Degree: "); //FOR DEBUGGING 
    Serial.print (startOfDegreeDelimiter);    
    Serial.print (shoulder_yaw);            // send shoulder yaw angle
    Serial.print (endOfDegreeDelimiter);  
    Serial.println ();
    delay(2);
-
-  /*Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("************************"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("Analog Value = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (flex_value);    
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();  
-
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("Degree Value = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (elbow_flexion);    
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();   
-
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("------------------------------------"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();  
-
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("Filtered Degree Value = "));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();
-
-  Serial.print (startOfNumberDelimiter);      
-  Serial.print (filt_flex_value);    
-  Serial.print (endOfNumberDelimiter);   
-  Serial.println ();   
-
-  Serial.print (startOfCharacterDelimiter);        
-  Serial.print (F("************************"));
-  Serial.print (endOfCharacterDelimiter);   
-  Serial.println ();*/
 
    //Serial.print ("Elbow Flex Degree: "); //FOR DEBUGGING 
    Serial.print (startOfDegreeDelimiter);    
@@ -1013,19 +930,19 @@ void loop(){
    Serial.println ();
    delay(2);
 
-   /*//Serial.print ("Wrist Flex Degree: "); //FOR DEBUGGING   
+   //Serial.print ("Wrist Flex Degree: "); //FOR DEBUGGING   
    Serial.print (startOfDegreeDelimiter);    
    Serial.print (wrist_flexion);           // send wrist flexion angle
    Serial.print (endOfDegreeDelimiter);
    Serial.println ();
-   delay(5);*/
+   delay(5);
    
-  /* //Serial.print ("Finger Flex Degree: "); //FOR DEBUGGING 
+   //Serial.print ("Finger Flex Degree: "); //FOR DEBUGGING 
    Serial.print (startOfDegreeDelimiter);    
    Serial.print (finger_flexion);          // send finger flexion angle
    Serial.print (endOfDegreeDelimiter);
    Serial.println ();
-   delay(5);*/
+   delay(5);
   
    //Takes a total of 21 milliseconds all degree values to be sent
 }
